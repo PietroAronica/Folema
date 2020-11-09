@@ -7,6 +7,8 @@ from bisect import bisect as _bisect
 from itertools import repeat as _repeat
 import tabulate
 
+strategies = {'D':{'GK':1.3, 'DF':1.7, 'MD':0.7, 'AT':0.3, 'FI':0.7}, 'C':{'GK':1, 'DF':1.4, 'MD':1, 'AT':0.6, 'FI':1.3}, 'B':{'GK':1, 'DF':1, 'MD':1, 'AT':1, 'FI':1}, 'A':{'GK':0.6, 'DF':0.5, 'MD':1.4, 'AT':1.5, 'FI':1.5}, 'H':{'GK':0.3, 'DF':0.2, 'MD':1.5, 'AT':2, 'FI':1.7}}
+
 def accumulate(iterable, func=operator.add, initial=None):
     'Return running totals'
     it = iter(iterable)
@@ -33,6 +35,89 @@ def choices(population, weights=None):
 	hi = n - 1
 	return [population[bisect(cum_weights, random.random() * total, 0, hi)]
 		for i in _repeat(None, 1)]
+
+#def attack(team, strategy, n):
+#	return (team.stats['AT']*strategy['AT']+team.stats['MD']*strategy['MD']+team.stats['TP']+team.stats['MO']+(team.stats['FI'])*random.randint(1,n))
+
+#def defend(team, strategy, n):
+#	return (team.stats['GK']*strategy['GK']+team.stats['DF']*strategy['DF']+team.stats['MD']*strategy['MD']+team.stats['TP']+team.stats['MO']+(team.stats['FI'])*random.randint(1,n))
+
+def attack(team, strategy, home='No'):
+	n = 4
+	at = team.stats['AT']*strategy['AT']*random.randint(1,5)
+	if at >= 0.8:
+		n+=1
+	md = team.stats['MD']*strategy['MD']*random.randint(1,5)
+	if md >= 0.8:
+		n+=1
+	tp = team.stats['TP']*random.randint(1,5)
+	if tp >= 0.8:
+		n+=1
+	mo = team.stats['MO']*random.randint(1,5)
+	if mo >= 0.8:
+		n+=1
+	fi = team.stats['FI']*random.randint(1,5)
+	if mo >= 0.8:
+		n+=1
+	if team in home:
+		n+=1
+	return random.randint(1,n)
+
+def defend(team, strategy, home='No'):
+	n = 4
+	gk = team.stats['GK']*strategy['GK']*random.randint(1,6)
+	if gk >= 0.8:
+		n+=1
+	df = team.stats['DF']*strategy['DF']*random.randint(1,6)
+	if df >= 0.8:
+		n+=1
+	md = team.stats['MD']*strategy['MD']*random.randint(1,6)
+	if md >= 0.8:
+		n+=1
+	tp = team.stats['TP']*random.randint(1,6)
+	if tp >= 0.8:
+		n+=1
+	mo = team.stats['MO']*random.randint(1,6)
+	if mo >= 0.8:
+		n+=1
+	fi = team.stats['FI']*random.randint(1,6)
+	if mo >= 0.8:
+		n+=1
+	if team in home:
+		n+=1
+	return random.randint(1,n)
+
+def phase(team1, team2, strategy1, strategy2, home='None'):
+	nc = 0
+	if team1 in home:
+		at = team1.stats['AT']*strategy1['AT']*random.randint(1,7)
+	else:
+		at = team1.stats['AT']*strategy1['AT']*random.randint(1,6)
+	if at >= 0.8:
+		nc+=1
+	if team2 in home:
+		df = team2.stats['DF']*strategy2['DF']*random.randint(1,7)
+	else:
+		df = team2.stats['DF']*strategy2['DF']*random.randint(1,6)
+	if df >= 0.8:
+		nc-=1
+	if nc < 0:
+		chances = int(choices([0,1,2], weights=[85,13,2])[0])
+	elif nc == 0:
+		chances = int(choices([0,1,2], weights=[70,25,5])[0])
+	elif nc > 0:
+		chances = int(choices([0,1,2], weights=[50,40,10])[0])
+	return chances
+
+#for t in [3,4,5]:
+#        for g in [3,4,5]:
+#                print t,g
+#                check = []
+#                for i in range(100000):
+#                        check.append(f.attack(l[t], strategies['B'])-f.defend(l[g], strategies['B']))
+#                for i in plt.hist(check, bins=bins)[0]:
+#                        print i
+
 
 #def choices(self, population, weights=None, *, cum_weights=None, k=1):
 #	"""Return a k sized list of population elements chosen with replacement.
@@ -82,7 +167,7 @@ class Table(object):
 		headers = ["Team", "P", "GP", "W", "L", "D", "GF", "GA", "Diff"]
 		print(tabulate.tabulate(sorted(sorted(sorted(sorted([[k] + v for k,v, in self.teams.items()], key=operator.itemgetter(0)), key=operator.itemgetter(6), reverse=True), key=operator.itemgetter(8), reverse=True), key=operator.itemgetter(1), reverse=True), headers = headers))
 
-class Team(object):
+class Team_old(object):
 	def __init__(self, name, strength):
 		self.name = name
 		self.strength = float(strength)
@@ -92,6 +177,24 @@ class Team(object):
 
 	def getstrength(self):
 		return self.strength
+
+class Team(object):
+	def __init__(self, name, stats):
+		self.name = name
+		self.stats = {}
+		self.stats['GK'] = float(stats[0])
+		self.stats['DF'] = float(stats[1])
+		self.stats['MD'] = float(stats[2])
+		self.stats['AT'] = float(stats[3])
+		self.stats['FI'] = float(stats[4])
+		self.stats['MO'] = float(stats[5])
+		self.stats['TP'] = float(stats[6])
+
+	def getname(self):
+		return self.name
+
+	def getstats(self):
+		return self.stats
 
 class Match(object):
 	def __init__(self, hometeam, awayteam):
@@ -142,15 +245,47 @@ def pairwise(items):
 	a = iter(items)
 	return itertools.izip(a, a)
 
-def makeleague(inputfile):
+def makeleague_old(inputfile):
 	dataset = []
 	f = open(inputfile)
 	opened = f.readlines()
 	for line in opened:
 		name,strength = line.split(",")
-		dataset.append(Team(name.strip(),strength.strip()))
+		dataset.append(Team_old(name.strip(),strength.strip()))
 	f.close()
 	return dataset
+
+def makeleague(inputfile):
+	dataset = []
+	f = open(inputfile)
+	opened = f.readlines()
+	for line in opened:
+		name,stats = line.split('=')
+		vals = []
+		for num in stats.split(','):
+			vals.append(num.strip())
+		dataset.append(Team(name.strip(),vals))
+	f.close()
+	return dataset
+
+def createleague(inputfile, options='None'):
+	dataset = []
+	f = open(inputfile)
+	opened = f.readlines()
+	league = []
+	teams = []
+	for line in opened:
+		name = line.strip()
+		teams.append(name)
+	f.close()
+	teams2 = random.sample(teams, 20)
+	for t in teams2:
+		ov = choices([3,4,5,6,7,8,9], weights=[2,2,4,4,3,3,2])[0]
+		vals = []
+		for z in range(0,7):
+			vals.append((ov*10-random.randrange(-6,6))/float(100))
+		league.append(Team(t,vals))
+	return league
 
 def makecalendar(league):
 	if len(league) % 2:
@@ -195,7 +330,7 @@ def makecalendar(league):
 		year.add_day(curr_day)
 	return year
 
-def playgame(hometeam, awayteam):
+def playgame_simple(hometeam, awayteam):
 	hts = hometeam.getstrength()
 	ats = awayteam.getstrength()
 	htp = random.randint(0, 6)
@@ -239,8 +374,22 @@ def playgame(hometeam, awayteam):
 			atg = htg
 	return hometeam.getname(), int(htg), int(atg), awayteam.getname()
 
-#def playgame(hometeam, awayteam):
-	
+def playgame(team1, team2, options='None'):
+	hts = team1.stats
+	ats = team2.stats
+	team1goals = 0
+	team2goals = 0
+	hometeam = [team1]
+	for turns in range(9):
+		c = phase(team1, team2, strategies['B'], strategies['B'], home=hometeam)
+		for g in range(c):
+			if attack(team1, strategies['B'], home=hometeam)-defend(team2, strategies['B'], home=hometeam) > 0:
+				team1goals+=1
+		c = phase(team2, team1, strategies['B'], strategies['B'], home=hometeam)
+		for g in range(c):
+			if attack(team2, strategies['B'], home=hometeam)-defend(team1, strategies['B'], home=hometeam) > 0:
+				team2goals+=1
+	return team1.getname(), int(team1goals), int(team2goals), team2.getname()
 
 def gameday(day, table):
 	for match in day.matches:
