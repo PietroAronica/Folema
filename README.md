@@ -14,3 +14,10 @@ Version 0.3
 - Added automatic mode to run through the year.
 - Added interactive mode to play a single game, inputting the desired strategy at every phase.
 - Added F (fitness-first, a defensive-minded tactic to preserve fitness) as a strategy.
+
+Version 0.4
+- Full rework of mechanics, flow, architecture
+- Name is now ChamPyonship Simulator
+- AI games are carried automatically (softmax simulator)
+- Player games are interactive
+- Currently, only automatic mode. Goes through year, simulates leagues from Europe and South America, simulates two international cups in Europe, handles promotion/relegation.
